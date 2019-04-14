@@ -5,8 +5,6 @@
 #include <DHT11.h>
 #include <LiquidCrystal_I2C.h>
 #include "RTClib.h"
-//#include "U8glib.h"
-//U8GLIB_SH1106_128X64 u8g(U8G_I2C_OPT_NONE);
 LiquidCrystal_I2C lcd(0x3F,20,4);
 RTC_DS3231 rtc;
 int pinHT = 2;
@@ -29,7 +27,7 @@ unsigned long tespera = 0;
 unsigned long tdelay = 1000;
 unsigned long tdelay2 = 900;
 byte multip = 2;
-bool everificado = 0;
+bool everificado = false;
 bool muxValue1;
 bool muxValue2;
 bool muxValue3;
@@ -159,7 +157,7 @@ void setup() {
   lcd.createChar(1,ccS1);
   lcd.createChar(2,ccBL);
   lcd.createChar(3,ccBR);
-  everificado = 0;
+  everificado = false;
   cdelay = 0;
   cdelayG = 0;
   nivelH = 6;
@@ -190,7 +188,7 @@ void loop() {
   estadobup = digitalRead(buretardop);
   estadobdown = digitalRead(bdretardop);
   if (estadobup == HIGH) {
-    if(retardop < 9) {
+    if(retardop < 600) {
       retardop++;
       EEPROM.update(addr, retardop);      
     }
@@ -294,9 +292,6 @@ void loop() {
       if (tespera > tprevio + tdelay2){
         digitalWrite(rele0, LOW);
       }
-      // delay(1000); //sustituir delay
-      // pinMode(rele0, OUTPUT);
-      // digitalWrite(rele0, LOW);
     } else {
       pinMode(rele0, OUTPUT);
       pinMode(rele1, OUTPUT);
@@ -304,9 +299,6 @@ void loop() {
       if (tespera > tprevio + tdelay2){
         digitalWrite(rele1, LOW);
       }
-      // delay(1000); //sustituir delay
-      // pinMode(rele1, OUTPUT);
-      // digitalWrite(rele1, LOW);
     }
   } else if (sbomba1 == true && sbomba2 == false) {
     pinMode(rele0, OUTPUT);
@@ -332,7 +324,7 @@ void loop() {
     lcd.print("electrodos en");
     lcd.setCursor(3,2);
     lcd.print("tanque !");
-    everificado = 1;
+    everificado = true;
   } else if (muxValue3 == 0 && muxValue4 == 1 && muxValue5 == 0) {
     lcd.clear();
     lcd.setCursor(3,0);
@@ -341,7 +333,7 @@ void loop() {
     lcd.print("electrodos en");
     lcd.setCursor(3,2);
     lcd.print("tanque !");
-    everificado = 1;
+    everificado = true;
   } else if (muxValue3 == 1 && muxValue4 == 1 && muxValue5 == 0) {
     lcd.clear();
     lcd.setCursor(3,0);
@@ -350,7 +342,7 @@ void loop() {
     lcd.print("electrodos en");
     lcd.setCursor(3,2);
     lcd.print("tanque !");
-    everificado = 1;
+    everificado = true;
   } else if (muxValue3 == 1 && muxValue4 == 0 && muxValue5 == 0) {
     lcd.clear();
     lcd.setCursor(3,0);
@@ -359,7 +351,7 @@ void loop() {
     lcd.print("electrodos en");
     lcd.setCursor(3,2);
     lcd.print("tanque !");
-    everificado = 1;
+    everificado = true;
   } else if (muxValue1 == 1 && muxValue2 == 0) {
     lcd.clear();
     lcd.setCursor(3,0);
@@ -368,57 +360,11 @@ void loop() {
     lcd.print("electrodos en");
     lcd.setCursor(3,2);
     lcd.print("cisterna !");
-    everificado = 1;
+    everificado = true;
   } else {
-    //lcd.clear();
-    if (everificado == 1) {
+    if (everificado == true) {
       lcd.clear();
-      everificado = 0;
-    }
-    lcd.setCursor(0,0);
-    lcd.print("CISTERNA");
-    if (muxValue1 == 1) {
-      lcd.setCursor(1,1);
-      lcd.write(byte(0));
-      lcd.setCursor(13,2);
-      lcd.print("VACIA");
-      lcd.setCursor(13,3);
-      lcd.print(vhora);
-      lcd.setCursor(15,3);
-      lcd.print(":");
-      lcd.setCursor(17,3);
-      lcd.print(vminuto);
-      everificado = 0;
-      //u8g.drawStr( 79, 36, "Vacia");
-      //u8g.drawStr( 79, 50, "desde");
-      //u8g.setPrintPos(80, 64);
-      //u8g.print(vhora);
-      //u8g.setPrintPos(94, 64);
-      //u8g.print(":");
-      //u8g.setPrintPos(100, 64);
-      //u8g.print(vminuto);
-      
-    } else {
-      lcd.setCursor(1,1);
-      lcd.write(byte(1));
-      lcd.setCursor(13,3);
-      lcd.print("RP:");
-      if (muxValue5 == 1) {
-        lcd.setCursor(5,3);
-        lcd.write(byte(0));
-        lcd.setCursor(16,3);
-        lcd.print(retardop);
-      } else {
-        lcd.setCursor(5,3);
-        lcd.write(byte(1));
-        if (sbomba1 == false && sbomba2 == false) {
-          lcd.setCursor(16,3);
-          lcd.print(retardop);
-        } else {
-          lcd.setCursor(16,3);
-          lcd.print(retardop - cdelay);
-        }
-      }
+      everificado = !everificado;
     }
     if (muxValue2 == 1) {
       lcd.setCursor(3,1);
@@ -451,39 +397,114 @@ void loop() {
     lcd.print("|");
     lcd.setCursor(10,3);
     lcd.print("|");
-    if (sbomba1 == true) {
-      lcd.setCursor(13,1);
-      lcd.print("B1");
+    lcd.setCursor(0,0);
+    lcd.print("CISTERNA");
+    if (muxValue1 == 1) {
+      lcd.setCursor(1,1);
+      lcd.write(byte(0));
       lcd.setCursor(13,2);
+      lcd.print("VACIA");
+      if (vhora < 10){
+        lcd.setCursor(14,3);
+        lcd.print(vhora);
+      } else {
+        lcd.setCursor(13,3);
+        lcd.print(vhora);
+      }
+      lcd.setCursor(15,3);
+      lcd.print(":");
+      lcd.setCursor(16,3);
+      lcd.print(vminuto);
+      if (vminuto < 10) {
+        lcd.setCursor(17,3);
+        lcd.print("  ");
+      } else {
+        lcd.setCursor(18,3);
+        lcd.print(" ");
+      }
+    } else {
+      lcd.setCursor(1,1);
+      lcd.write(byte(1));
+      lcd.setCursor(13,2);
+      lcd.print("     ");
+      lcd.setCursor(13,3);
+      lcd.print("RP:");
+      if (muxValue5 == 1) {
+        lcd.setCursor(5,3);
+        lcd.write(byte(0));
+        lcd.setCursor(16,3);
+        lcd.print(retardop);
+        if (retardop < 10) {
+          lcd.setCursor(17,3);
+          lcd.print("s  ");
+        } else if (retardop >= 10 && retardop < 100) {
+          lcd.setCursor(18,3);
+          lcd.print("s ");
+        } else if (retardop >= 100) {
+          lcd.setCursor(19,3);
+          lcd.print("s");
+        }
+      } else {
+        lcd.setCursor(5,3);
+        lcd.write(byte(1));
+        if (sbomba1 == false && sbomba2 == false) {
+          lcd.setCursor(16,3);
+          lcd.print(retardop);
+          if (retardop < 10) {
+            lcd.setCursor(17,3);
+            lcd.print("s  ");
+          } else if (retardop >= 10 && retardop < 100) {
+            lcd.setCursor(18,3);
+            lcd.print("s ");
+          } else if (retardop >= 100) {
+            lcd.setCursor(19,3);
+            lcd.print("s");
+          }
+        } else {
+          lcd.setCursor(16,3);
+          lcd.print(retardop - cdelay);
+          if (retardop - cdelay < 10) {
+            lcd.setCursor(17,3);
+            lcd.print("s  ");
+          } else if (retardop - cdelay >= 10 && retardop < 100) {
+            lcd.setCursor(18,3);
+            lcd.print("s ");
+          } else if (retardop - cdelay >= 100) {
+            lcd.setCursor(19,3);
+            lcd.print("s");
+          }
+        }
+      }
+    }
+    if (sbomba1 == true) {
+      lcd.setCursor(13,0);
+      lcd.print("B1");
+      lcd.setCursor(13,1);
       lcd.write(byte(2));
-      lcd.setCursor(14,2);
+      lcd.setCursor(14,1);
       lcd.write(byte(3));
+    } else {
+      lcd.setCursor(13,0);
+      lcd.print("  ");
+      lcd.setCursor(13,1);
+      lcd.print(" ");
+      lcd.setCursor(14,1);
+      lcd.print(" ");
     }
     if (sbomba2 == true) {
-      lcd.setCursor(16,1);
+      lcd.setCursor(16,0);
       lcd.print("B2");
-      lcd.setCursor(16,2);
+      lcd.setCursor(16,1);
       lcd.write(byte(2));
-      lcd.setCursor(17,2);
+      lcd.setCursor(17,1);
       lcd.write(byte(3));
+    } else {
+      lcd.setCursor(16,0);
+      lcd.print("  ");
+      lcd.setCursor(16,1);
+      lcd.print(" ");
+      lcd.setCursor(17,1);
+      lcd.print(" ");
     }
-//    lcd.setCursor(13,3);
-//    lcd.print("RP:");
-//    if (muxValue5 == 1) {
-//      lcd.setCursor(5,3);
-//      lcd.write(byte(0));
-//      lcd.setCursor(16,3);
-//      lcd.print(retardop);
-//    } else {
-//      lcd.setCursor(5,3);
-//      lcd.write(byte(1));
-//      if (sbomba1 == false && sbomba2 == false) {
-//        lcd.setCursor(16,3);
-//        lcd.print(retardop);
-//      } else {
-//        lcd.setCursor(16,3);
-//        lcd.print(retardop - cdelay);
-//      }
-//    }
   }
 }
