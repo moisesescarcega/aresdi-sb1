@@ -28,6 +28,7 @@ unsigned long tdelay = 1000;
 unsigned long tdelay2 = 900;
 byte multip = 2;
 bool everificado = false;
+bool dverificado = false;
 bool muxValue1;
 bool muxValue2;
 bool muxValue3;
@@ -55,6 +56,7 @@ int esled = LOW;
 byte numavisos = 0;
 const byte avisoslim = 5;
 File miArchivo;
+//Símbolo para electrodo con contacto:
 byte ccS1[] = {
   B01110,
   B11111,
@@ -65,6 +67,7 @@ byte ccS1[] = {
   B01110,
   B00000
 };
+//Símbolo para electrodo sin contacto:
 byte ccS0[] = {
   B01010,
   B10001,
@@ -75,6 +78,7 @@ byte ccS0[] = {
   B01010,
   B00000
 };
+//Símbolo para bomba encendida, lado izquierdo:
 byte ccBL[] = {
   B00111,
   B01111,
@@ -85,6 +89,7 @@ byte ccBL[] = {
   B00111,
   B00000
 };
+//Símbolo para bomba encendida, lado derecho:
 byte ccBR[] = {
   B11100,
   B11110,
@@ -95,6 +100,7 @@ byte ccBR[] = {
   B11100,
   B00000
 };
+//Función inicial para sensar electrodos
 void inicial(void) {
   muxValue1 = digitalRead(sen1);
   muxValue2 = digitalRead(sen2);
@@ -102,6 +108,7 @@ void inicial(void) {
   muxValue4 = digitalRead(sen4);
   muxValue5 = digitalRead(sen5);
 }
+//Función para registro en SD
 int regtime(int tipo) {
   dht11.read(hum, temp);
   miArchivo = SD.open("REG.CSV", FILE_WRITE);
@@ -126,6 +133,7 @@ int regtime(int tipo) {
     miArchivo.close();
   }
 }
+//Función alternado y simultaneado de bomba
 void cambiabomba() {
   if (albomba == 3) {
     sbomba1 = true;
@@ -158,9 +166,11 @@ void setup() {
   lcd.createChar(2,ccBL);
   lcd.createChar(3,ccBR);
   everificado = false;
+  dverificado = false;
   cdelay = 0;
   cdelayG = 0;
   nivelH = 6;
+  //Valor de retardo al paro si no tiene un valor, descomentar la siguiente línea
   //EEPROM.write(addr, 3);
   vretardo = EEPROM.read(addr);
   if (vretardo > 0) {
@@ -173,11 +183,11 @@ void setup() {
   albomba = 0;
   SD.begin();
   rtc.begin();
+//Ajustar reloj RTC con programación, descomentar la siguiente línea
 //  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
 }
 void loop() {
   tespera = millis();
-//  tiempoenciendeb = millis();
   DateTime now = rtc.now();
   anio = now.year();
   mes = now.month();
@@ -187,6 +197,7 @@ void loop() {
   segundo = now.second();
   estadobup = digitalRead(buretardop);
   estadobdown = digitalRead(bdretardop);
+  //Si se presiona el botón respectivo, se ajusta el retardo al paro
   if (estadobup == HIGH) {
     if(retardop < 600) {
       retardop++;
@@ -199,12 +210,15 @@ void loop() {
       EEPROM.update(addr, retardop);
     }
   }
+  //Se ejecuta el programa, verificando electrodos cada tiempo determinado
+  //sin usar delay, según el tiempo establecido en tdelay
   if (tespera > tprevio + tdelay) {
     tprevio = tespera;
     inicial();
     if (muxValue1 == 1 && muxValue2 == 1) {
       sbomba1 = false;
       sbomba2 = false;
+      //Activa alarma sonora o visual según lo que se conecte
       if (numavisos < avisoslim) {
         if (esled == LOW) {
           esled = HIGH;
@@ -216,6 +230,7 @@ void loop() {
       } else {
         digitalWrite(alarm, LOW);
       }
+      //Determina la hora desde la cual se detecta cisterna vacía
       if (vaciadesde == 0) {
         vhora = hora;
         vminuto = minuto;
@@ -284,6 +299,7 @@ void loop() {
       }
     }
   }
+  //Activa o desactiva los reles para control de bomba
   if (sbomba1 == true && sbomba2 == true) {
     if (albomba == 2) {
       pinMode(rele1, OUTPUT);
@@ -316,8 +332,14 @@ void loop() {
     pinMode(rele1, OUTPUT);
     digitalWrite(rele1, HIGH);
   }
+  //Primero evalúa problemas con electrodos mal posicionados para ver en LCD,
+  //si no hay problema, muestra electrodos, bombas, retardo al paro y eventos
   if (muxValue3 == 1 && muxValue4 == 0 && muxValue5 == 1) {
-    lcd.clear();
+    //limpiar una vez
+    if (dverificado == true){
+      lcd.clear();
+      dverificado = !dverificado;
+    }
     lcd.setCursor(3,0);
     lcd.print("Verificar");
     lcd.setCursor(0,1);
@@ -326,7 +348,11 @@ void loop() {
     lcd.print("tanque !");
     everificado = true;
   } else if (muxValue3 == 0 && muxValue4 == 1 && muxValue5 == 0) {
-    lcd.clear();
+    //limpiar una vez
+    if (dverificado == true){
+      lcd.clear();
+      dverificado = !dverificado;
+    }
     lcd.setCursor(3,0);
     lcd.print("Verificar");
     lcd.setCursor(0,1);
@@ -335,7 +361,11 @@ void loop() {
     lcd.print("tanque !");
     everificado = true;
   } else if (muxValue3 == 1 && muxValue4 == 1 && muxValue5 == 0) {
-    lcd.clear();
+    //limpiar una vez
+    if (dverificado == true){
+      lcd.clear();
+      dverificado = !dverificado;
+    }
     lcd.setCursor(3,0);
     lcd.print("Verificar");
     lcd.setCursor(0,1);
@@ -344,7 +374,11 @@ void loop() {
     lcd.print("tanque !");
     everificado = true;
   } else if (muxValue3 == 1 && muxValue4 == 0 && muxValue5 == 0) {
-    lcd.clear();
+    //limpiar una vez
+    if (dverificado == true){
+      lcd.clear();
+      dverificado = !dverificado;
+    }
     lcd.setCursor(3,0);
     lcd.print("Verificar");
     lcd.setCursor(0,1);
@@ -353,7 +387,11 @@ void loop() {
     lcd.print("tanque !");
     everificado = true;
   } else if (muxValue1 == 1 && muxValue2 == 0) {
-    lcd.clear();
+    //limpiar una vez
+    if (dverificado == true){
+      lcd.clear();
+      dverificado = !dverificado;
+    }
     lcd.setCursor(3,0);
     lcd.print("Verificar");
     lcd.setCursor(0,1);
@@ -362,6 +400,7 @@ void loop() {
     lcd.print("cisterna !");
     everificado = true;
   } else {
+    //limpiar una vez
     if (everificado == true) {
       lcd.clear();
       everificado = !everificado;
@@ -506,5 +545,6 @@ void loop() {
       lcd.setCursor(17,1);
       lcd.print(" ");
     }
+    dverificado = true;
   }
 }
